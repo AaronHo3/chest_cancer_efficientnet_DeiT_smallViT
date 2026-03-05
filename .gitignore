@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project outputs
+checkpoints/
+logs/
+*.pt
+*.pth
+
+# Data (dataset lives in ~/.cache/kagglehub, not in repo)
+*.zip
+data/downloaded/
+
+# OS
+.DS_Store
+Thumbs.db

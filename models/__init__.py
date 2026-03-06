@@ -15,6 +15,7 @@ def get_device(prefer_mps: bool = True) -> torch.device:
     """
     if torch.cuda.is_available():
         return torch.device("cuda")
+    # MPS = Metal Performance Shaders (GPU on Apple Silicon)
     if prefer_mps and getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
@@ -26,8 +27,7 @@ def get_model(
     pretrained: bool = True,
 ) -> torch.nn.Module:
     """
-    name: "efficientnet_b2" | "deit_tiny" | "vit_small"
-    num_classes: 4 (adenocarcinoma, large_cell, squamous, normal).
+    Build a model by name. pretrained=True loads ImageNet weights for the backbone; the classification head is always new (num_classes output).
     """
     name = name.strip().lower()
     if name == "efficientnet_b2":

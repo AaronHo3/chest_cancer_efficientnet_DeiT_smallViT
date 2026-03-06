@@ -16,19 +16,20 @@ from models import get_device, get_model
 
 
 def train_one_epoch(model, loader, criterion, optimizer, device):
+    """Run one full pass over the training set; update weights and return average loss and accuracy."""
     model.train()
     total_loss = 0.0
     correct = 0
     total = 0
     for images, labels in tqdm(loader, desc="Train", leave=False):
         images, labels = images.to(device), labels.to(device)
-        optimizer.zero_grad()
+        optimizer.zero_grad()  # clear gradients from previous batch
         logits = model(images)
-        loss = criterion(logits, labels)
-        loss.backward()
-        optimizer.step()
+        loss = criterion(logits, labels)  # cross-entropy
+        loss.backward()  # compute gradients
+        optimizer.step()  # update weights
         total_loss += loss.item()
-        pred = logits.argmax(dim=1)
+        pred = logits.argmax(dim=1)  # predicted class (index with highest logit)
         correct += (pred == labels).sum().item()
         total += labels.size(0)
     return total_loss / len(loader), correct / total if total else 0.0
@@ -36,6 +37,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
 
 @torch.no_grad()
 def evaluate(model, loader, criterion, device):
+    """Run model on loader without updating weights; return average loss and accuracy."""
     model.eval()
     total_loss = 0.0
     correct = 0
@@ -52,6 +54,7 @@ def evaluate(model, loader, criterion, device):
 
 
 def main():
+    # --- Parse arguments and check data path ---
     parser = argparse.ArgumentParser(description="Train chest cancer CT classifier")
     parser.add_argument("--model", type=str, default=config.MODEL, choices=["efficientnet_b2", "deit_tiny", "vit_small"])
     parser.add_argument("--data_root", type=str, default=config.DATA_ROOT, help="Path to dataset root")
@@ -71,6 +74,7 @@ def main():
     device = get_device(prefer_mps=not args.no_mps)
     print(f"Device: {device}")
 
+    # --- Data loaders: train (with augmentation), valid (no augmentation), test not used during training ---
     train_loader, valid_loader, _ = get_dataloaders(
         args.data_root,
         image_size=config.IMG_SIZE,
@@ -79,20 +83,27 @@ def main():
     )
     print(f"Train batches: {len(train_loader)}, Valid batches: {len(valid_loader)}")
 
+    # --- Model, loss, optimizer, and learning-rate scheduler ---
     model = get_model(args.model, num_classes=config.NUM_CLASSES).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", factor=0.5, patience=3)  # reduce lr when val acc plateaus
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     best_val_acc = 0.0
     best_epoch = 0
-    patience_counter = 0
+    patience_counter = 0  # epochs since last improvement (for early stopping)
+    history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
 
+    # --- Training loop: one epoch at a time, validate after each, save best model, optional early stop ---
     for epoch in range(1, args.epochs + 1):
         train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = evaluate(model, valid_loader, criterion, device)
-        scheduler.step(val_acc)
+        scheduler.step(val_acc)  # may reduce learning rate if val acc didn't improve
+        history["train_loss"].append(train_loss)
+        history["train_acc"].append(train_acc)
+        history["val_loss"].append(val_loss)
+        history["val_acc"].append(val_acc)
         print(f"Epoch {epoch}: train loss={train_loss:.4f} acc={train_acc:.4f} | val loss={val_loss:.4f} acc={val_acc:.4f}")
 
         if val_acc > best_val_acc:
@@ -116,6 +127,33 @@ def main():
                 break
 
     print(f"Done. Best validation accuracy: {best_val_acc:.4f} (epoch {best_epoch})")
+
+    # --- Save training curves (loss and accuracy vs epoch) as a figure ---
+    try:
+        import matplotlib.pyplot as plt
+        epochs_range = range(1, len(history["train_loss"]) + 1)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        ax1.plot(epochs_range, history["train_loss"], "b-", label="Train")
+        ax1.plot(epochs_range, history["val_loss"], "r-", label="Valid")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Loss")
+        ax1.set_title("Loss vs Epoch")
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        ax2.plot(epochs_range, history["train_acc"], "b-", label="Train")
+        ax2.plot(epochs_range, history["val_acc"], "r-", label="Valid")
+        ax2.set_xlabel("Epoch")
+        ax2.set_ylabel("Accuracy")
+        ax2.set_title("Accuracy vs Epoch")
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plot_path = os.path.join(args.checkpoint_dir, f"{args.model}_training_curves.png")
+        plt.savefig(plot_path, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"Training curves saved to {plot_path}")
+    except Exception as e:
+        print(f"Could not save training curves: {e}")
 
 
 if __name__ == "__main__":

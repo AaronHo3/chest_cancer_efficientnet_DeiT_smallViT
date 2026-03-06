@@ -2,6 +2,8 @@
 
 Classify chest CT scans into **four classes**: three NSCLC types (**Adenocarcinoma**, **Large cell carcinoma**, **Squamous cell carcinoma**) plus **Normal**, using the [Chest CT-Scan Images](https://www.kaggle.com/datasets/mohamedhanyyy/chest-ctscan-images) dataset.
 
+**NOTICE:** This project is meant purely for learning and discovery.
+
 ## Setup
 
 ```bash

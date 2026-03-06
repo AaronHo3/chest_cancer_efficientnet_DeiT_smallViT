@@ -18,7 +18,7 @@ Classify chest CT scans into **four classes**: three NSCLC types (Adenocarcinoma
 
 ## 2. Recommended Approach
 
-### 2.1 Transfer learning (primary)
+### 2.1 Transfer learning 
 
 - **Preferred backbone**: **EfficientNet-B2 or EfficientNet-B3** (good accuracy/speed trade-off; literature shows strong results on lung/CT tasks).
 - **Alternatives**: ResNet-50 (simpler, faster), EfficientNetV2-S (if you want to try a newer variant).
@@ -46,7 +46,6 @@ Classify chest CT scans into **four classes**: three NSCLC types (Adenocarcinoma
 - **Load**: Read images from `Train`, `Test`, `Valid` (e.g. PIL/OpenCV → tensors).
 - **Resize**: Fixed size (e.g. 224×224 for EfficientNet/ResNet, or 384 if using a larger model).
 - **Normalize**: Use ImageNet mean/std (e.g. `[0.485, 0.456, 0.406]`, `[0.229, 0.224, 0.225]`) to match pretrained weights.
-- **Optional**: HU-window normalization if you have raw DICOM/HU values; for pre-rendered PNG/JPG from Kaggle, standard normalization is usually sufficient.
 
 ### 3.2 Data augmentation (training only)
 
@@ -64,7 +63,7 @@ Classify chest CT scans into **four classes**: three NSCLC types (Adenocarcinoma
 
 ---
 
-## 4. Model Architecture (concrete)
+## 4. Model Architecture 
 
 ### 4.1 Baseline: EfficientNet-B2
 
@@ -96,7 +95,7 @@ Classify chest CT scans into **four classes**: three NSCLC types (Adenocarcinoma
 
 ---
 
-## 6. Project Structure (suggested)
+## 6. Project Structure 
 
 ```
 chest_cancer_recognition/
@@ -143,18 +142,8 @@ Use consistent string labels (e.g. folder names) and map to these indices in the
 
 ---
 
-## 9. Running on MacBook (or elsewhere)
-
-- **Apple Silicon (M1/M2/M3)**: PyTorch supports **MPS**. Use `device = "mps"` when `torch.backends.mps.is_available()`; otherwise use CPU. Small batch sizes (e.g. 16–24) keep memory fine for DeiT-Tiny and EfficientNet-B2.
-- **Intel Mac / no GPU**: Training on CPU is fine for DeiT-Tiny and EfficientNet-B2; reduce batch size (e.g. 8–16) and expect longer epochs.
-- **Cloud / Linux with GPU**: Set `CUDA_VISIBLE_DEVICES` and use `device = "cuda"`; you can use larger batch sizes and optionally larger models (e.g. ViT-Small, EfficientNet-B3).
-
----
-
-## 10. Risks & Mitigations
+## 9. Risks & Mitigations
 
 - **Class imbalance** → Weighted loss + oversampling/sampler.
 - **Overfitting** → Dropout, augmentation, early stopping, optional L2.
 - **Small dataset** → Rely on transfer learning and moderate augmentation; avoid very large models (e.g. EfficientNet-B7) unless you add more data.
-
-This design gives you a 4-class baseline (EfficientNet-B2 or DeiT-Tiny, transfer learning, balanced evaluation) that you can extend with other backbones (ResNet, ViT-Small, Swin) with minimal changes to the data pipeline.

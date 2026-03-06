@@ -36,7 +36,7 @@ Ensure you have Kaggle API credentials set up if needed for `kagglehub` (see [ka
 
 Select via `config.MODEL` or env `MODEL` (e.g. `MODEL=deit_tiny` or `MODEL=efficientnet_b2`). All models use **4 classes** (3 cancer types + normal). On Apple Silicon, PyTorch will use MPS when available. Details and device notes are in **DESIGN.md**.
 
-## Results (test set)
+## Results 
 
 Metrics below are from `evaluate.py` on the held-out test set (saved to `checkpoints/*_metrics.json`).
 
